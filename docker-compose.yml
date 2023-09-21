@@ -31,3 +31,28 @@ services:
       - "5050:80"
     depends_on:
       - postgres
+  mysql:
+    image: mariadb:10.5.8
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: '2G'
+    restart: always
+    environment:
+      - MYSQL_DATABASE=my_store
+      - MYSQL_USER=root
+      - MYSQL_ROOT_PASSWORD=admin123
+      - MYSQL_PORT=3306
+    ports:
+      - 3307:3306
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    environment:
+      - MYSQL_ROOT_PASSWORD=admin123
+      - PMA_HOST=mysql
+      - MYSQL_USER=root
+    ports:
+      - 8080:80
