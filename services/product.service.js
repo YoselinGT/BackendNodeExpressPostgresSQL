@@ -1,77 +1,55 @@
-import faker from 'faker';
-import boom  from '@hapi/boom';
-import pool from '../libs/postgres.pool.js';
-import sequelize from "../libs/sequelize.js";
+import models from '../libs/sequelize.js';
+import {Op} from 'sequelize';
+import boom from "@hapi/boom";
+
 class ProductsService {
 
-    constructor(){
-        this.products = [];
-        this.generate();
-        this.pool = pool;
-        this.pool.on('error',(err) => console.log(err));
-    }
-
-    generate() {
-        const limit = 100;
-        for (let index = 0; index < limit; index++) {
-            this.products.push({
-                id: faker.datatype.uuid(),
-                name: faker.commerce.productName(),
-                price: parseInt(faker.commerce.price(), 10),
-                image: faker.image.imageUrl(),
-                isBlock: faker.datatype.boolean(),
-            });
-        }
-    }
-
     async create(data) {
-        const newProduct = {
-            id: faker.datatype.uuid(),
-            ...data
-        }
-        this.products.push(newProduct);
+        const newProduct = await models.models.Product.create(data);
         return newProduct;
     }
 
-    async find() {
-        const query = 'SELECT * FROM task';
-        const [data] = await sequelize.query(query);
-        return data;
+    async find({limit = 10, offset=0, price, price_min, price_max}) {
+        const options = {
+            include: ['category'],
+            limit,
+            offset,
+            where: {}
+        }
+        price ? options.where.price = price : '';
+        console.log(options);
+
+        price_min && price_max  ? options.where.price = {
+            [Op.gte]:price_min,
+            [Op.lte]:price_max,
+        }
+        : '';
+
+        console.log(options);
+        const rta = await models.models.Product.findAll(options);
+        return rta;
     }
 
     async findOne(id) {
-        const product = this.products.find(item => item.id === id);
-        if (!product) {
-            throw boom.notFound('product not found');
+        const Product = await models.models.Product.findByPk(id);
+        if(!Product) {
+            throw boom.notFound("Product not found");
         }
-        if (product.isBlock) {
-            throw boom.conflict('product is block');
-        }
-        return product;
+        return Product;
     }
 
     async update(id, changes) {
-        const index = this.products.findIndex(item => item.id === id);
-        if (index === -1) {
-            throw boom.notFound('product not found');
-        }
-        const product = this.products[index];
-        this.products[index] = {
-            ...product,
-            ...changes
-        };
-        return this.products[index];
+        const product = await this.findOne(id);
+        const rta = await product.update(changes);
+        return rta;
     }
 
     async delete(id) {
-        const index = this.products.findIndex(item => item.id === id);
-        if (index === -1) {
-            throw boom.notFound('product not found');
-        }
-        this.products.splice(index, 1);
-        return { id };
+        const product = await this.findOne(id);
+        const rta = await product.destroy();
+        return {id};
     }
 
 }
 
-export  {ProductsService};
+export default ProductsService;

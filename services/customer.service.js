@@ -1,13 +1,13 @@
 import models from '../libs/sequelize.js';
 import boom from "@hapi/boom";
-import {ne} from "faker/lib/locales.js";
 
 
 class CustomerService {
 
     async create(data) {
-        const newUser = await models.models.User.create(data.user);
-        const newCustomer = await models.models.Customer.create({...data, userId: newUser.id});
+        const newCustomer = await models.models.Customer.create(data, {
+            include: ['user']
+        });
         return newCustomer;
     }
 
